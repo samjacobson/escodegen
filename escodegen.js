@@ -469,7 +469,7 @@
             } else if (esutils.code.isLineTerminator(code) || code === 0x5C  /* \ */) {
                 result += escapeDisallowedCharacter(code);
                 continue;
-            } else if (!esutils.code.isIdentifierPart(code) && (json && code < 0x20  /* SP */ || !json && !escapeless && (code < 0x20  /* SP */ || code > 0x7E  /* ~ */))) {
+            } else if ((json && code < 0x20  /* SP */) || !(json || escapeless || (code >= 0x20  /* SP */ && code <= 0x7E  /* ~ */))) {
                 result += escapeAllowedCharacter(code, str.charCodeAt(i + 1));
                 continue;
             }
@@ -1592,7 +1592,7 @@
             var result, bodyFlags, semicolonOptional, that = this;
             withIndent(function () {
                 result = [
-                    'if' + space + '(',
+                    'if' + '(',
                     that.generateExpression(stmt.test, Precedence.Sequence, E_TTT),
                     ')'
                 ];
@@ -1619,7 +1619,7 @@
         ForStatement: function (stmt, flags) {
             var result, that = this;
             withIndent(function () {
-                result = ['for' + space + '('];
+                result = ['for' + '('];
                 if (stmt.init) {
                     if (stmt.init.type === Syntax.VariableDeclaration) {
                         result.push(that.generateStatement(stmt.init, S_FFFF));
@@ -1978,7 +1978,7 @@
 
         AwaitExpression: function (expr, precedence, flags) {
             var result = join(
-                expr.all ? 'await*' : 'await',
+                expr.delegate ? 'await*' : 'await',
                 this.generateExpression(expr.argument, Precedence.Await, E_TTT)
             );
             return parenthesize(result, Precedence.Await, precedence);
@@ -2014,7 +2014,7 @@
                 result.push(generateStarSuffix(expr) || noEmptySpace());
                 result.push(generateIdentifier(expr.id));
             } else {
-                result.push(generateStarSuffix(expr) || space);
+                result.push(generateStarSuffix(expr));
             }
             result.push(this.generateFunctionBody(expr));
             return result;
@@ -2038,19 +2038,19 @@
             withIndent(function (indent) {
                 var i, iz;
                 for (i = 0, iz = expr.elements.length; i < iz; ++i) {
+                    result.push(multiline ? indent : '');
+                    if(i > 0)
+                        result.push(',');
                     if (!expr.elements[i]) {
-                        if (multiline) {
-                            result.push(indent);
-                        }
+                        // Missing element
                         if (i + 1 === iz) {
                             result.push(',');
                         }
                     } else {
-                        result.push(multiline ? indent : '');
                         result.push(that.generateExpression(expr.elements[i], Precedence.Assignment, E_TTT));
                     }
                     if (i + 1 < iz) {
-                        result.push(',' + (multiline ? newline : space));
+                        result.push((multiline ? newline : space));
                     }
                 }
             });
@@ -2158,13 +2158,13 @@
                 result = [ '{', newline, indent, fragment ];
 
                 if (multiline) {
-                    result.push(',' + newline);
+//                    result.push(newline);
                     for (i = 1, iz = expr.properties.length; i < iz; ++i) {
-                        result.push(indent);
+                        result.push(newline + indent + ',');
                         result.push(that.generateExpression(expr.properties[i], Precedence.Sequence, E_TTT));
-                        if (i + 1 < iz) {
-                            result.push(',' + newline);
-                        }
+//                        if (i + 1 < iz) {
+//                            result.push(',' + newline);
+//                        }
                     }
                 }
             });
@@ -2408,7 +2408,7 @@
 
 
         if (extra.comment) {
-            result = addComments(expr, result);
+            result = addComments(expr,result);
         }
         return toSourceNodeWhenNeeded(result, expr);
     };
